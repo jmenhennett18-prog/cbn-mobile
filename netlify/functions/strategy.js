@@ -5,7 +5,8 @@ const TOKEN = process.env.GITHUB_TOKEN;
 const PEOPLE_PATH = 'Construction Business Network/People/Active';
 
 async function githubGet(path) {
-  const url = `https://api.github.com/repos/${REPO}/contents/${encodeURIComponent(path)}`;
+  const encoded = path.split('/').map(p => encodeURIComponent(p)).join('/');
+  const url = `https://api.github.com/repos/${REPO}/contents/${encoded}`;
   const res = await fetch(url, {
     headers: { Authorization: `token ${TOKEN}`, Accept: 'application/vnd.github.v3+json' }
   });
