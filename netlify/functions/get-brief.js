@@ -96,7 +96,7 @@ Write a pre-meeting brief for ${contact.name}. Cover:
 - Personal details worth remembering (family, interests, teams, etc.)
 - 2-3 suggested talking points for today
 
-One page max. Bullet points. No fluff.`
+One page max. Plain text only — no markdown, no asterisks, no pound signs, no bold formatting. Use plain section labels like "WHO THEY ARE:" followed by bullet points starting with a dash. Write naturally, like a text message from a colleague.`
       }]
     });
 
