@@ -48,10 +48,15 @@ exports.handler = async (event) => {
     const { query } = JSON.parse(event.body);
     if (!query) return { statusCode: 400, body: JSON.stringify({ error: 'Query required' }) };
 
+    console.log('REPO:', process.env.GITHUB_REPO);
+    console.log('TOKEN set:', !!process.env.GITHUB_TOKEN);
+
     const contacts = await getAllContacts();
+    console.log('Contacts loaded:', contacts.length);
+
     if (contacts.length === 0) return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Could not load network data' })
+      body: JSON.stringify({ error: 'Could not load network data — GitHub token may be invalid or repo path incorrect' })
     };
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
