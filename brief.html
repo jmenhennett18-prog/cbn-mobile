@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Get a Brief — CBN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back">← Back</a>
+    <h1>Get a Brief</h1>
+    <p>Pre-meeting intel on any contact</p>
+  </div>
+  <div class="container">
+    <div class="card">
+      <label>Contact Name</label>
+      <div class="mic-row">
+        <button class="mic-btn" id="micBtn">🎤</button>
+        <div class="mic-label">
+          <strong>Tap to speak their name</strong>
+          or type below
+        </div>
+      </div>
+      <input type="text" id="nameInput" placeholder="e.g. Wesley Stanley" autocomplete="off">
+      <button class="btn btn-primary" id="submitBtn" onclick="getBrief()">Get Brief</button>
+    </div>
+
+    <div class="loading" id="loading">
+      <span class="spinner">⚙️</span>
+      Pulling up their file...
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div id="result" style="display:none;">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <strong id="resultName" style="font-size:17px;"></strong>
+          <button class="btn btn-sm btn-secondary" onclick="copyBrief()">Copy</button>
+        </div>
+        <div class="result-box" id="briefText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="voice.js"></script>
+  <script>
+    const micBtn = document.getElementById('micBtn');
+    const nameInput = document.getElementById('nameInput');
+
+    const voice = new VoiceRecorder(
+      (transcript) => { nameInput.value = transcript.trim(); },
+      (state, msg) => {
+        if (state === 'recording') {
+          micBtn.classList.add('recording');
+          micBtn.textContent = '⏹️';
+        } else {
+          micBtn.classList.remove('recording');
+          micBtn.textContent = '🎤';
+          if (state === 'idle' && nameInput.value.trim()) getBrief();
+        }
+        if (state === 'error') showStatus(msg, 'error');
+      }
+    );
+
+    micBtn.addEventListener('click', () => voice.toggle(nameInput.value));
+
+    function showStatus(msg, type = 'info') {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = `status show ${type}`;
+    }
+
+    function copyBrief() {
+      navigator.clipboard.writeText(document.getElementById('briefText').textContent);
+      showStatus('Copied to clipboard', 'success');
+    }
+
+    async function getBrief() {
+      const name = nameInput.value.trim();
+      if (!name) { showStatus('Enter a contact name', 'error'); return; }
+
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('status').className = 'status';
+      document.getElementById('loading').classList.add('show');
+      document.getElementById('submitBtn').disabled = true;
+
+      try {
+        const res = await fetch('/.netlify/functions/get-brief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        document.getElementById('loading').classList.remove('show');
+
+        if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+        document.getElementById('resultName').textContent = data.contactName;
+        document.getElementById('briefText').textContent = data.brief;
+        document.getElementById('result').style.display = 'block';
+      } catch (err) {
+        document.getElementById('loading').classList.remove('show');
+        showStatus(err.message, 'error');
+      } finally {
+        document.getElementById('submitBtn').disabled = false;
+      }
+    }
+
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') getBrief(); });
+  </script>
+</body>
+</html>

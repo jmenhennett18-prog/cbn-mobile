@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>New Contact — CBN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back">← Back</a>
+    <h1>New Contact</h1>
+    <p>Speak naturally — Claude will extract the details</p>
+  </div>
+  <div class="container">
+    <div class="card">
+      <label>Dictate or Type</label>
+      <div class="mic-row">
+        <button class="mic-btn" id="micBtn">🎤</button>
+        <div class="mic-label">
+          <strong>Tap mic and speak</strong>
+          Name, company, role, how you met, contact info, anything you know
+        </div>
+      </div>
+      <p class="hint">Example: "John Smith, CEO at Acme Construction in Dallas, met him at TEXO last week, his cell is 214-555-1234, works in construction and real estate"</p>
+      <textarea id="dictation" placeholder="Your words will appear here as you speak..."></textarea>
+      <button class="btn btn-primary" id="submitBtn" onclick="saveContact()">Save Contact</button>
+    </div>
+
+    <div class="loading" id="loading">
+      <span class="spinner">⚙️</span>
+      Claude is extracting contact details and saving...
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div id="result" style="display:none;">
+      <div class="card">
+        <div style="color:#155724; font-size:17px; font-weight:600; margin-bottom:12px;">✓ Contact Saved</div>
+        <div id="savedName" style="font-size:15px; margin-bottom:8px;"></div>
+        <div id="savedDetails" style="font-size:14px; color:#6c757d; line-height:1.6;"></div>
+        <div class="divider"></div>
+        <a href="new-contact.html" class="btn btn-secondary btn-sm">Add Another</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="voice.js"></script>
+  <script>
+    const micBtn = document.getElementById('micBtn');
+    const dictation = document.getElementById('dictation');
+
+    const voice = new VoiceRecorder(
+      (transcript) => { dictation.value = transcript; },
+      (state, msg) => {
+        if (state === 'recording') {
+          micBtn.classList.add('recording');
+          micBtn.textContent = '⏹️';
+        } else {
+          micBtn.classList.remove('recording');
+          micBtn.textContent = '🎤';
+        }
+        if (state === 'error') showStatus(msg, 'error');
+      }
+    );
+
+    micBtn.addEventListener('click', () => voice.toggle(dictation.value));
+
+    function showStatus(msg, type = 'info') {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = `status show ${type}`;
+    }
+
+    async function saveContact() {
+      const text = dictation.value.trim();
+      if (!text) { showStatus('Add some details first', 'error'); return; }
+
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('status').className = 'status';
+      document.getElementById('loading').classList.add('show');
+      document.getElementById('submitBtn').disabled = true;
+
+      try {
+        const res = await fetch('/.netlify/functions/save-contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+        document.getElementById('loading').classList.remove('show');
+
+        if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+        document.getElementById('savedName').textContent = data.name;
+        document.getElementById('savedDetails').textContent =
+          [data.company, data.role, data.location].filter(Boolean).join(' · ');
+        document.getElementById('result').style.display = 'block';
+        dictation.value = '';
+      } catch (err) {
+        document.getElementById('loading').classList.remove('show');
+        showStatus(err.message, 'error');
+      } finally {
+        document.getElementById('submitBtn').disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
