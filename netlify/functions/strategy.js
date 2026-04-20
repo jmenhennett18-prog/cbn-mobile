@@ -22,13 +22,22 @@ async function getFileContent(path) {
 async function getAllContacts() {
   const files = await githubGet(PEOPLE_PATH);
   if (!Array.isArray(files)) return [];
-  const contents = await Promise.all(
-    files.filter(f => f.name.endsWith('.md')).map(async f => {
+
+  // Fetch in batches of 10 to avoid rate limits while staying fast
+  const mdFiles = files.filter(f => f.name.endsWith('.md'));
+  const results = [];
+  for (let i = 0; i < mdFiles.length; i += 10) {
+    const batch = mdFiles.slice(i, i + 10);
+    const contents = await Promise.all(batch.map(async f => {
       const content = await getFileContent(f.path);
-      return content ? `=== ${f.name.replace('.md', '')} ===\n${content}` : null;
-    })
-  );
-  return contents.filter(Boolean);
+      if (!content) return null;
+      // Extract just the frontmatter + first 20 lines to keep context lean
+      const lines = content.split('\n').slice(0, 40).join('\n');
+      return `=== ${f.name.replace('.md', '')} ===\n${lines}`;
+    }));
+    results.push(...contents.filter(Boolean));
+  }
+  return results;
 }
 
 exports.handler = async (event) => {

@@ -114,7 +114,7 @@
         const data = await res.json();
         document.getElementById('loading').classList.remove('show');
 
-        if (!res.ok) throw new Error(data.error || 'Something went wrong');
+        if (!res.ok) throw new Error(data.error || `Error ${res.status}: Something went wrong`);
 
         document.getElementById('strategyText').textContent = cleanText(data.result);
         document.getElementById('result').style.display = 'block';
